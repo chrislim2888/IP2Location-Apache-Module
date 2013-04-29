@@ -1,0 +1,70 @@
+IP2Location 5.0.0
+=================
+
+This is a IP2Location Apache Module that enables the user to identify the country, region, city, latitude, longitude, zip code, time zone, ISP, domain name, connection type, area code and weather by IP address.  It contains a demo IP2Location IP-COUNTRY BIN database which consists of real data for IP address range 0.0.0.0 to 99.255.255.255.  This database contains IP address blocks as key and countries as values.  The paid version of IP2Location database covers all IP address range. In general, it is more complete, fast and accurate than using reverse DNS lookups. Developers can download other sample databases to evaluate other features such as region or state, city, latitude and longitude, US ZIP code, time zone, Internet Service Provider (ISP) or company name, domain name, net speed, area code, weather station code, weather station name, mobile country code (MCC), mobile network code (MNC) and carrier brand, elevation, and usage type using the same Apache module.
+
+For more details, please visit:
+http://www.ip2location.com/apache.htm
+http://www.ip2location.com/developers.htm
+
+This version also supports IP2Location IPv6.
+
+Requirements
+------------
+1) IP2Location C API library ( download from http://www.ip2location.com/developers/c )
+2) Apache 2.0x
+3) GNU make or any compatible make utility
+
+Linux Build
+-----------
+1) apxs -i -a -L<path_to_ip2location_c_api_compiled_library> -I<path_to_ip2location_c_api_src> -lIP2Location -c mod_ip2location.c
+	e.g. apxs -i -a -L../C-IP2Location-5.0.0/libIP2Location/.libs/ -I../C-IP2Location-5.0.0/libIP2Location/ -lIP2Location -c mod_ip2location.c
+
+Windows Build
+-------------
+1) open Makefile.win and configure macros as below:
+		- IP2LOCATION_CSRC_PATH = <path_to_ip2location_c_api_src>
+			e.g. IP2LOCATION_CSRC_PATH = ../C-IP2Location-5.0.0/libIP2Location
+		- IP2LOCATION_CLIB_PATH = <path_to_ip2location_c_api_compiled_library>
+			e.g. IP2LOCATION_CLIB_PATH = ../C-IP2Location-5.0.0/libIP2Location
+		- APACHE_INSTALL_PATH   = <path_to_apache_installation>
+			e.g. APACHE_INSTALL_PATH   = "C:/Program Files/Apache Group/Apache2"
+2) nmake /f Makefile.win
+3) copy the resulting IP2Location_apache.dll to Apache modules path
+
+Apache Configuration
+--------------------
+1) load the compiled IP2Location module by adding these lines in httpd.conf
+		LoadModule IP2Location_module <compiled_ip2location_dll_file_with_fully_qualified_path>
+		<IfModule mod_ip2location.c>
+  		IP2LocationEnable <On|Off>
+  		# ENV will set server variables
+  		# NOTES will set apache notes
+  		# ALL will set both
+  		IP2LocationSetmode <ALL|ENV|NOTES> 
+  		IP2LocationDBFile <ip2location_binary_db_file_with_fully_qualified_path>
+		</IfModule>
+2) restart Apache server to take effect of the changes
+
+PHP Testing
+-----------
+from internet browser, load mod_ip2location_test.php
+
+Apache Rewrite Testing
+----------------------
+1) add below lines to Apache configuration file httpd.conf:
+		RewriteEngine On
+		RewriteCond %{ENV:IP2LOCATION_COUNTRY_SHORT} ^UK$
+		RewriteRule ^(.*)$ http://www.google.co.uk [L]
+2) this will redirect all ip address from United Kingdom to http://www.google.co.uk
+
+
+Download More Sample Databases
+------------------------------
+wget http://www.ip2location.com/download/samples-db24.zip
+unzip samples-db24.zip
+
+
+For support, please email support@ip2location.com.
+
+http://www.ip2location.com
