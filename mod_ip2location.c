@@ -1,4 +1,4 @@
-/* Copyright (C) 2005-2013 IP2Location.com
+/* Copyright (C) 2005-2014 IP2Location.com
  * All Rights Reserved
  *
  * This library is free software: you can redistribute it and/or
@@ -29,7 +29,8 @@ static const int NOTES_SET_MODE  = 0x0002;
 static const int ALL_SET_MODE    = 0x0003;
 
 typedef struct {
-	int enableFlag;
+	int enabled;
+	int detectProxy;
 	int setMode; 
 	char* dbFile;
 	IP2Location* ip2locObj;
@@ -52,14 +53,40 @@ static int ip2location_post_read_request(request_rec *r) {
 	IP2LocationRecord* record;
 	char buff[20];
 	
-	config = (ip2location_server_config*)
-						ap_get_module_config(r->server->module_config, &IP2Location_module);
+	config = (ip2location_server_config*) ap_get_module_config(r->server->module_config, &IP2Location_module);
 	
-	if(!config->enableFlag)
+	if(!config->enabled)
 		return OK;
-	
-	ipaddr = r->connection->remote_ip;
+
+	if(config->detectProxy){
+		if(apr_table_get(r->headers_in, "Client-IP")) {
+			ipaddr = (char *)apr_table_get(r->headers_in, "Client-IP");
+		}
+		else if(apr_table_get(r->headers_in, "X-Forwarded-For")) {
+			ipaddr = (char *)apr_table_get(r->headers_in, "X-Forwarded-For");
+		}
+		else if(apr_table_get(r->headers_in, "X-Forwarded-IP")) {
+			ipaddr = (char *)apr_table_get(r->headers_in, "X-Forwarded-IP");
+		}
+		else if(apr_table_get(r->headers_in, "Forwarded-For")) {
+			ipaddr = (char *)apr_table_get(r->headers_in, "Forwarded-For");
+		}
+		else if(apr_table_get(r->headers_in, "X-Forwarded")) {
+			ipaddr = (char *)apr_table_get(r->headers_in, "X-Forwarded");
+		}
+		else if(apr_table_get(r->headers_in, "Via")) {
+			ipaddr = (char *)apr_table_get(r->headers_in, "Via");
+		}
+		else {
+			ipaddr = r->connection->remote_ip;
+		}
+	}
+	else{
+		ipaddr = r->connection->remote_ip;
+	}
+
 	record = IP2Location_get_all(config->ip2locObj, ipaddr);
+
 	if(record) {
 		if(config->setMode & ENV_SET_MODE) {
 			apr_table_set(r->subprocess_env, "IP2LOCATION_COUNTRY_SHORT", record->country_short); 
@@ -119,78 +146,95 @@ static int ip2location_post_read_request(request_rec *r) {
 }
 
 static const char* set_ip2location_enable(cmd_parms *cmd, void *dummy, int arg) {
-	ip2location_server_config* config = (ip2location_server_config*)
-																			ap_get_module_config(cmd->server->module_config, &IP2Location_module);
-  if(!config) 
-  	return NULL;
-  
-  config->enableFlag = arg;
-  return NULL;
+	ip2location_server_config* config = (ip2location_server_config*) ap_get_module_config(cmd->server->module_config, &IP2Location_module);
+	
+	if(!config) 
+		return NULL;
+	
+	config->enabled = arg;
+	
+	return NULL;
 }
 
 static const char* set_ip2location_dbfile(cmd_parms* cmd, void* dummy, const char* dbFile, int arg) {
-  ip2location_server_config* config = (ip2location_server_config*)
-  																		ap_get_module_config(cmd->server->module_config, &IP2Location_module);
+  ip2location_server_config* config = (ip2location_server_config*) ap_get_module_config(cmd->server->module_config, &IP2Location_module);
 	if(!config) 
 		return NULL;
 		
 	config->dbFile = apr_pstrdup(cmd->pool, dbFile);
-	if(config->enableFlag) {
+	if(config->enabled) {
 		config->ip2locObj = IP2Location_open(config->dbFile);	
+		
 		if(!config->ip2locObj)
 			return "Error opening dbFile!";
 	}
-	
+
 	return NULL; 
 }
 
 static const char* set_ip2location_set_mode(cmd_parms* cmd, void* dummy, const char* mode, int arg) {
-	ip2location_server_config* config = (ip2location_server_config*)
-  																		ap_get_module_config(cmd->server->module_config, &IP2Location_module);
+	ip2location_server_config* config = (ip2location_server_config*) ap_get_module_config(cmd->server->module_config, &IP2Location_module);
+	
 	if(!config) 
 		return NULL;
 	
 	if(strcmp(mode, "ALL") == 0) 	
 		config->setMode = ALL_SET_MODE;
+
 	else if(strcmp(mode, "ENV") == 0) 	
 		config->setMode = ENV_SET_MODE;
+
 	else if(strcmp(mode, "NOTES") == 0)
 		config->setMode = NOTES_SET_MODE; 	
+
 	else
 		return "Invalid mode for IP2LocationSetMode";
 	
 	return NULL; 
 }
 
+static const char* set_ip2location_detect_proxy(cmd_parms *cmd, void *dummy, int arg) {
+	ip2location_server_config* config = (ip2location_server_config*) ap_get_module_config(cmd->server->module_config, &IP2Location_module);
+	
+	if(!config) 
+		return NULL;
+	
+	config->detectProxy = arg;
+	
+	return NULL;
+}
+
 static void* ip2location_create_svr_conf(apr_pool_t* pool, server_rec* svr) {
-  ip2location_server_config* svr_cfg = apr_pcalloc(pool, sizeof(ip2location_server_config));
-	svr_cfg->enableFlag = 0;
+	ip2location_server_config* svr_cfg = apr_pcalloc(pool, sizeof(ip2location_server_config));
+	
+	svr_cfg->enabled = 0;
 	svr_cfg->dbFile = NULL;
 	svr_cfg->setMode = ALL_SET_MODE;
+	svr_cfg->detectProxy = 0;
 	svr_cfg->ip2locObj = NULL;
-  return svr_cfg ;
+	return svr_cfg ;
 }
 
 static const command_rec ip2location_cmds[] = {
-   AP_INIT_FLAG( "IP2LocationEnable", set_ip2location_enable, NULL, OR_FILEINFO, "Turn on mod_ip2location"),
-   AP_INIT_TAKE1( "IP2LocationDBFile", set_ip2location_dbfile, NULL, OR_FILEINFO, "File path to DB file"),
-   AP_INIT_TAKE1( "IP2LocationSetMode", set_ip2location_set_mode, NULL, OR_FILEINFO, "Set scope mode"),
-   {NULL} 
+	AP_INIT_FLAG( "IP2LocationEnable", set_ip2location_enable, NULL, OR_FILEINFO, "Turn on mod_ip2location"),
+	AP_INIT_TAKE1( "IP2LocationDBFile", set_ip2location_dbfile, NULL, OR_FILEINFO, "File path to DB file"),
+	AP_INIT_TAKE1( "IP2LocationSetMode", set_ip2location_set_mode, NULL, OR_FILEINFO, "Set scope mode"),
+	AP_INIT_TAKE1( "IP2LocationDetectProxy", set_ip2location_detect_proxy, NULL, OR_FILEINFO, "Detect proxy headers"),
+	{NULL} 
 };
 
 static void ip2location_register_hooks(apr_pool_t *p) {
 	ap_hook_post_read_request( ip2location_post_read_request, NULL, NULL, APR_HOOK_MIDDLE );
 	ap_hook_child_init(        ip2location_child_init, NULL, NULL, APR_HOOK_MIDDLE );
-
 }
 
 // API hooks
 module AP_MODULE_DECLARE_DATA IP2Location_module = {
-   STANDARD20_MODULE_STUFF, 
-   NULL,                        /* create per-dir    config structures */
-   NULL,                        /* merge  per-dir    config structures */
-   ip2location_create_svr_conf, /* create per-server config structures */
-   NULL,                        /* merge  per-server config structures */
-   ip2location_cmds,            /* table of config file commands       */
-   ip2location_register_hooks   /* register hooks                      */
+	STANDARD20_MODULE_STUFF, 
+	NULL,                        /* create per-dir    config structures */
+	NULL,                        /* merge  per-dir    config structures */
+	ip2location_create_svr_conf, /* create per-server config structures */
+	NULL,                        /* merge  per-server config structures */
+	ip2location_cmds,            /* table of config file commands       */
+	ip2location_register_hooks   /* register hooks                      */
 };
