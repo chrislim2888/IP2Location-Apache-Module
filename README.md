@@ -1,4 +1,4 @@
-# IP2Location Apache Module 7.0.0
+# IP2Location Apache Module 7.0.1
 
 This is a IP2Location Apache Module that enables the user to find the country, region, city, latitude, longitude, 
 zip code, time zone, ISP, domain name, connection type, area code, weather, mobile network, elevation, 
@@ -17,9 +17,11 @@ For more details, please visit:
 
 # Installation
 ### Linux Build
-`apxs2 -i -a -L<path_to_ip2location_c_api_compiled_library> -I<path_to_ip2location_c_api_src> -lIP2Location -c mod_ip2location.c`  
-	e.g. `apxs2 -i -a -L /usr/local/lib/ -I ../ip2location-c-6.0.3/libIP2Location/ -l IP2Location -c mod_ip2location.c`
+Depending on installed Apache devel, APXS is either as "apxs" or "apxs2" available
 
+1) apxs -i -a -L<path_to_ip2location_c_api_compiled_library> -I<path_to_ip2location_c_api_src> -lIP2Location -c mod_ip2location.c
+	e.g. apxs -i -a -L ../ip2location-c-7.0.1/libIP2Location/ -I ../ip2location-c-7.0.1/libIP2Location/ -l IP2Location -c mod_ip2location.c
+ 
 ### Windows Build
 1. open Makefile.win and configure macros as below:  
 `IP2LOCATION_CSRC_PATH = <path_to_ip2location_c_api_src>`  

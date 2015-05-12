@@ -78,11 +78,19 @@ static int ip2location_post_read_request(request_rec *r) {
 			ipaddr = (char *)apr_table_get(r->headers_in, "Via");
 		}
 		else {
-			ipaddr = r->connection->remote_ip;
+			#if (((AP_SERVER_MAJORVERSION_NUMBER == 2) && (AP_SERVER_MINORVERSION_NUMBER >= 4)) || (AP_SERVER_MAJORVERSION_NUMBER > 2))
+				ipaddr = r->connection->client_ip;
+			#else
+				ipaddr = r->connection->remote_ip;
+			#endif
 		}
 	}
 	else{
-		ipaddr = r->connection->remote_ip;
+		#if (((AP_SERVER_MAJORVERSION_NUMBER == 2) && (AP_SERVER_MINORVERSION_NUMBER >= 4)) || (AP_SERVER_MAJORVERSION_NUMBER > 2))
+			ipaddr = r->connection->client_ip;
+		#else	
+			ipaddr = r->connection->remote_ip;
+		#endif	
 	}
 
 	record = IP2Location_get_all(config->ip2locObj, ipaddr);
@@ -217,9 +225,9 @@ static void* ip2location_create_svr_conf(apr_pool_t* pool, server_rec* svr) {
 
 static const command_rec ip2location_cmds[] = {
 	AP_INIT_FLAG( "IP2LocationEnable", set_ip2location_enable, NULL, OR_FILEINFO, "Turn on mod_ip2location"),
-	AP_INIT_TAKE1( "IP2LocationDBFile", set_ip2location_dbfile, NULL, OR_FILEINFO, "File path to DB file"),
-	AP_INIT_TAKE1( "IP2LocationSetMode", set_ip2location_set_mode, NULL, OR_FILEINFO, "Set scope mode"),
-	AP_INIT_TAKE1( "IP2LocationDetectProxy", set_ip2location_detect_proxy, NULL, OR_FILEINFO, "Detect proxy headers"),
+	AP_INIT_TAKE1( "IP2LocationDBFile", (const char *(*)()) set_ip2location_dbfile, NULL, OR_FILEINFO, "File path to DB file"),
+	AP_INIT_TAKE1( "IP2LocationSetMode", (const char *(*)()) set_ip2location_set_mode, NULL, OR_FILEINFO, "Set scope mode"),
+	AP_INIT_TAKE1( "IP2LocationDetectProxy", (const char *(*)()) set_ip2location_detect_proxy, NULL, OR_FILEINFO, "Detect proxy headers"),
 	{NULL} 
 };
 

@@ -1,3 +1,6 @@
+7.0.1	2015-05-12
+	* fixes to be able to compile mod_ip2location.c with Apache 2.4 includes
+	
 7.0.0	2014-08-29
 	* Added supports to IP2Location-C 7.0.0 with IPv6
 
