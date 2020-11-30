@@ -232,7 +232,11 @@ static const command_rec ip2location_cmds[] = {
 };
 
 static void ip2location_register_hooks(apr_pool_t *p) {
-	ap_hook_post_read_request( ip2location_post_read_request, NULL, NULL, APR_HOOK_MIDDLE );
+	/* Attempt to load before the following mods */
+	static const char *const aszSucc[] =
+	{ "mod_setenvif.c", "mod_rewrite.c", NULL };
+
+	ap_hook_post_read_request( ip2location_post_read_request, NULL, aszSucc, APR_HOOK_MIDDLE );
 	ap_hook_child_init(        ip2location_child_init, NULL, NULL, APR_HOOK_MIDDLE );
 }
 
