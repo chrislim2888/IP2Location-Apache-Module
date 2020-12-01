@@ -79,7 +79,7 @@ static int ip2location_post_read_request(request_rec *r) {
 		}
 		else {
 			#if (((AP_SERVER_MAJORVERSION_NUMBER == 2) && (AP_SERVER_MINORVERSION_NUMBER >= 4)) || (AP_SERVER_MAJORVERSION_NUMBER > 2))
-				ipaddr = r->connection->client_ip;
+				ipaddr = r->useragent_ip;
 			#else
 				ipaddr = r->connection->remote_ip;
 			#endif
@@ -87,7 +87,7 @@ static int ip2location_post_read_request(request_rec *r) {
 	}
 	else{
 		#if (((AP_SERVER_MAJORVERSION_NUMBER == 2) && (AP_SERVER_MINORVERSION_NUMBER >= 4)) || (AP_SERVER_MAJORVERSION_NUMBER > 2))
-			ipaddr = r->connection->client_ip;
+			ipaddr = r->useragent_ip;
 		#else	
 			ipaddr = r->connection->remote_ip;
 		#endif	
@@ -97,6 +97,7 @@ static int ip2location_post_read_request(request_rec *r) {
 
 	if(record) {
 		if(config->setMode & ENV_SET_MODE) {
+			apr_table_set(r->subprocess_env, "IP2LOCATION_IP", ipaddr);
 			apr_table_set(r->subprocess_env, "IP2LOCATION_COUNTRY_SHORT", record->country_short); 
 			apr_table_set(r->subprocess_env, "IP2LOCATION_COUNTRY_LONG", record->country_long); 
 			apr_table_set(r->subprocess_env, "IP2LOCATION_REGION", record->region); 
@@ -122,6 +123,7 @@ static int ip2location_post_read_request(request_rec *r) {
 			apr_table_set(r->subprocess_env, "IP2LOCATION_USAGETYPE", record->usagetype);
 		}
 		if(config->setMode & NOTES_SET_MODE) {
+			apr_table_set(r->notes, "IP2LOCATION_IP", ipaddr);
 			apr_table_set(r->notes, "IP2LOCATION_COUNTRY_SHORT", record->country_short); 
 			apr_table_set(r->notes, "IP2LOCATION_COUNTRY_LONG", record->country_long); 
 			apr_table_set(r->notes, "IP2LOCATION_REGION", record->region); 
